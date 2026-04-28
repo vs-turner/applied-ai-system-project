@@ -1,253 +1,242 @@
-# 🎵 Music Recommender Simulation
+# CS Master's Program Recommender
 
-## Project Summary
+## Original Project: Modules 1–3
 
-In this project you will build and explain a small music recommender system.
+The original project was a **Music Recommender Simulation**. It used a content-based scoring system to rank songs from a small local CSV dataset by comparing user taste preferences (genre, mood, energy, tempo, valence, danceability, acousticness) to each song's attributes. The goal was to make recommendation logic transparent, testable, and easy to inspect without any external APIs.
 
-Your goal is to:
+---
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+## Final Project: CS Master's Program Recommender
 
-Replace this paragraph with your own summary of what your version does.
+This system recommends Computer Science master's programs based on applicant priorities: budget, GRE willingness, delivery mode (online vs. in-person), visa support needs, ranking preference, target specializations, and time to graduation.
 
-Real world systems use both 1) Collaborative filtering and 2) Content-based filtering. Originally, there was no contensst based filtering and people tried to analyze qualities of the song like genre or mood to calculate what new music people would like. Eventually, recommender systems were improved by realizing that user data also informs what people will like, with patterns that are not easily extracted from other aspects of the songs on their own. User behavior triggers recommendations for collaborative filtering, while content based filtering uses more granular characteristics or classifications of the songs to calculate similarity to a person's tastes or current listens.
+The system matters because applicants face hard, competing tradeoffs and benefit from structured, explainable support. Unlike a neural model, every score is fully auditable — each factor's contribution is printed with the recommendation.
 
-My system will rely primarily on genre and mood to determine recommendations.
+**Key capabilities:**
 
+- Loads 10 curated CS programs from a local CSV plus per-program text files
+- Scores and ranks programs using a 9-factor weighted algorithm
+- Retrieves relevant sentences from local program notes to ground each explanation
+- Runs fully offline — no embeddings, no external APIs, no vector database
 
+---
 
+## System Architecture Diagram
 
-## How The System Works
+![System Architecture](./assets/mermaid-diagram.png)
 
-![System Screenshot](./images/Screenshot%202026-04-15%20at%2019.50.40.png)
+Mermaid source — paste into mermaid.live to regenerate the diagram:
 
-Explain your design in plain language.
+```mermaid
+flowchart TD
+    A[Applicant Profile\nbudget · GRE · delivery · visa · specializations] --> B[Local Retriever\nkeyword match over program text files]
+    B --> C[Scorer\n9-factor weighted scoring per program]
+    C --> D[Ranker\nsort by score descending]
+    D --> E[Explanation Generator\nreasons string + retrieved snippet]
+    E --> F[CLI Output\nranked programs with scores and explanations]
+    F --> G[Human Review\nspot-check ranking quality]
+    G --> H{Acceptable?}
+    H -- Yes --> I[Final Output]
+    H -- No --> A
+    J[(Local Data Store\nprograms.csv\ndata/programs/*.txt)] --> B
+    J --> C
+    K[Automated Tests\npytest · 11 tests] --> D
+    K --> B
+```
 
-Some prompts to answer:
+**Data flow:** applicant profile → keyword retrieval from local text files → score each program across 9 factors → rank by score → generate explanation with retrieved evidence → automated test validation + human spot check → final ranked output.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+---
 
-You can include a simple diagram or bullet list if helpful.
+## Architecture Overview
 
-----------
+| Component | Role |
+| --- | --- |
+| `data/programs.csv` | 10 CS programs with structured fields (tuition, GRE, delivery, visa, tier, specializations) |
+| `data/programs/*.txt` | Per-program plain-text notes; source for local retrieval |
+| `src/recommender.py` | Core logic: `load_programs`, `score_program`, `retrieve_program_notes`, `recommend_programs`, `Recommender` class |
+| `src/main.py` | CLI runner; 5 applicant personas; prints ranked results with explanations |
+| `tests/test_recommender.py` | 11 pytest tests covering ranking, constraints, explanations, and retrieval |
 
-Here is the scoring system as an equation: 
-score =
-2.0·I(song.genre == user.favorite_genre)
+**Scoring factors (9 total):**
 
-1.5·I(song.mood == user.favorite_mood)
-1.0·(1 - |song.energy - user.target_energy|)
-0.8·(1 - |song.tempo_bpm - user.target_tempo_bpm|/100)
-0.7·(1 - |song.valence - user.target_valence|)
-0.6·(1 - |song.danceability - user.target_danceability|)
-0.5·(1 - |song.acousticness - user.target_acousticness|)
+| Factor | Weight | Notes |
+| --- | --- | --- |
+| Tuition fit | ±3.0 | +3.0 if within budget; penalty scales with how far over |
+| GRE compatibility | +1.0 / −2.5 | −2.5 if GRE required but applicant unwilling |
+| Delivery match | +2.0 | Only awarded on exact match or "any" |
+| Visa support | +2.0 / −1.5 | Applied only when applicant needs visa support |
+| Ranking tier | ±1.5 | +1.5 if program meets or exceeds preferred tier |
+| Specialization overlap | up to +1.5 | +0.75 per matching specialization, capped at 1.5 |
+| Application fee | +1.0 / −0.5 | Compared to applicant's max fee tolerance |
+| Research/industry fit | +1.0 / +0.5 | +1.0 for research-focused applicant × top-2 tier program |
+| Duration fit | +0.5 | Awarded if program completes within applicant's timeline |
 
-Some potential biases are overindexing on genre and mood. 
-Also, if songs.csv has more songs from a certain genre or mood, those will appear more often regardless of the goodness of fit to a user because they are just more numerous.
+---
 
-Example profile:
+## Setup Instructions
 
-user_profile = {
-    "favorite_genre": "lofi",
-    "favorite_mood": "chill",
-    "target_energy": 0.45,
-    "target_tempo_bpm": 75,
-    "target_valence": 0.60,
-    "target_danceability": 0.60,
-    "target_acousticness": 0.80,
-}
+1. Clone the repository.
 
+```bash
+git clone <repo-url>
+cd applied-ai-system-project
+```
 
-#### Step 1: Stress Test with Diverse Profiles
+1. Create and activate a virtual environment.
 
-![Description](testuser1.png)
-![Description](testuser2.png)
-![Description](testuser3.png)
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+```
 
-
-## Getting Started
-
-### Setup
-
-1. Create a virtual environment (optional but recommended):
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
-
-2. Install dependencies
+1. Install dependencies.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the app:
+1. Run the recommender CLI.
 
 ```bash
 python -m src.main
 ```
 
-
-### Running Tests
-
-Run the starter tests with:
+1. Run the test suite.
 
 ```bash
 pytest
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+---
+
+## Sample Interactions
+
+### Example 1 — International Applicant
+
+**Profile:** max tuition $70,000 · willing GRE · in-person · needs visa support · research focus · ML and AI specializations
+
+```text
+#1 Stanford University — MS Computer Science
+   Score: 13.50 | in-person | $67,000 | GRE required | App fee: $125
+   Within budget (+3.0) | GRE compatible (+1.0) | Delivery match (+2.0) | Visa support (+2.0)
+   | Meets tier 1 (+1.5) | Specialization match: ai, ml (+1.5) | Fee within limit (+1.0)
+   | Research fit (+1.0) | Duration within target (+0.5)
+   Retrieved: Faculty include world-renowned researchers in AI, ML, and systems who regularly
+   collaborate with companies like Google, Meta, and Apple. Students have access to the Stanford
+   AI Lab (SAIL) and other cutting-edge research facilities.
+
+#2 Carnegie Mellon University — MS Computer Science
+   Score: 12.75 | in-person | $58,000 | GRE required | App fee: $75
+   ...Specialization match: ml (+0.75)...
+
+#3 Columbia University — MS Computer Science
+   Score: 12.75 | in-person | $65,000 | GRE required | App fee: $85
+   Retrieved: Students can participate in research through Columbia's Data Science Institute
+   and the Columbia Artificial Intelligence (ColumbiaAI) group.
+```
+
+**Why the ranking makes sense:** Stanford scores highest because it matches every factor — budget, delivery, visa support, tier 1, and two specializations. CMU and Columbia tie at 12.75 because they each match only one specialization (ml) versus Stanford's two (ml + ai).
 
 ---
 
-## Experiments You Tried
+### Example 2 — Budget-Focused Domestic Applicant
 
-Use this section to document the experiments you ran. For example:
+**Profile:** max tuition $25,000 · no GRE · online · no visa needed · industry focus · ML and software engineering
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+```text
+#1 Georgia Institute of Technology — Online MS Computer Science
+   Score: 10.50 | online | $7,000 | GRE: not required | App fee: $75
+   Within budget (+3.0) | GRE compatible (+1.0) | Delivery match (+2.0) | Tier 2 (+1.5)
+   | Spec match: ml (+0.75) | Fee within limit (+1.0) | Industry fit (+0.5) | Duration (+0.5)
+   Retrieved: Georgia Institute of Technology Online MS Computer Science (OMSCS) is one of the
+   most affordable and accessible accredited CS master's programs available.
+
+#2 University of Illinois Urbana-Champaign — Master of Computer Science
+   Score: 9.75 | online | $22,000 | GRE: not required | App fee: $70
+
+#3 Arizona State University — MS Computer Science
+   Score: 8.25 | online | $15,000 | GRE: not required | App fee: $70
+```
+
+**Why the ranking makes sense:** GT OMSCS scores highest because it's the cheapest program in the corpus ($7,000) and matches delivery, GRE, and an ML specialization. UIUC ranks second — slightly more expensive but still within budget. ASU ranks third despite lower cost because its ranking tier (4) falls below the applicant's tier-3 preference.
 
 ---
 
-## Limitations and Risks
+### Example 3 — Research-Oriented Top-Tier Applicant
 
-Summarize some limitations of your recommender.
+**Profile:** max tuition $80,000 · willing GRE · in-person · no visa needed · research focus · ML, AI, theory
 
-Examples:
+```text
+#1 Stanford University — MS Computer Science
+   Score: 11.50 | in-person | $67,000 | Tier 1
+   Retrieved: Faculty include world-renowned researchers in AI, ML, and systems... Students
+   have access to the Stanford AI Lab (SAIL) and other cutting-edge research facilities.
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+#2 Carnegie Mellon University — MS Computer Science
+   Score: 10.75 | in-person | $58,000 | Tier 1
 
-You will go deeper on this in your model card.
+#3 Carnegie Mellon University — MS Computational Data Science
+   Score: 10.75 | in-person | $73,000 | Tier 1
+   Retrieved: MCDS is specifically designed for students targeting data engineering, ML
+   infrastructure, and applied data science roles rather than pure research.
+```
+
+**Why the ranking makes sense:** All three are tier-1 in-person programs the applicant can afford. Stanford edges ahead with a 3-specialization match (ml, ai, theory). CMU MSCS and MCDS tie because each matches only ml; the retrieval note for MCDS correctly flags that it skews industry — useful signal for a research-focused applicant.
+
+---
+
+## Design Decisions
+
+**1. Local file retrieval instead of embeddings or web lookup.**
+Results are fully reproducible and offline. No API costs, no rate limits, no semantic drift between runs. Keyword matching over short text files is transparent enough for students to trace.
+
+**2. Rule-based weighted scoring instead of a fine-tuned model.**
+Each factor's contribution is explicit in the output. Weights are adjustable without retraining. This makes the system auditable and the tradeoffs visible — essential for a domain where applicants need to understand *why* a program was recommended.
+
+**3. GRE requirement and application fee as first-class scoring factors.**
+These are hard constraints for many applicants (not willing to take GRE, fee sensitive) and are typically ignored or buried in comparison tools. Modelling them with high weights (−2.5 and ±1.0 respectively) reflects their real decision weight.
+
+**4. Automated tests plus human spot checks for reliability.**
+Automated tests catch scoring regressions and verify invariants (e.g., GRE-optional always beats GRE-required for a non-willing applicant, ceteris paribus). Manual review of the CLI output checks that explanations cite real retrieved facts and that rankings match intuition.
+
+---
+
+## Testing Summary
+
+### Test results: 11/11 passed
+
+| Test | What it verifies |
+| --- | --- |
+| `test_recommend_returns_programs_sorted_by_score` | Budget/online applicant gets an online, GRE-optional program first |
+| `test_gre_required_program_ranks_lower_for_non_gre_applicant` | GRE constraint is correctly penalized |
+| `test_budget_constraint_penalizes_expensive_program` | Over-budget program scores lower than affordable one |
+| `test_visa_support_boosts_score_for_international_applicant` | Visa support factor applies correctly |
+| `test_specialization_overlap_increases_score` | Matching specializations add to score |
+| `test_explain_recommendation_returns_non_empty_string` | Explanation is always a non-empty string |
+| `test_explanation_contains_scoring_reasons` | Explanation references at least one scoring label |
+| `test_retrieve_returns_empty_string_for_missing_file` | Missing notes file returns empty gracefully |
+| `test_retrieve_returns_text_without_keywords` | Retrieval works without keyword filter |
+| `test_retrieve_keyword_match_returns_relevant_sentence` | Keyword retrieval returns sentence containing the term |
+| `test_retrieve_gre_keyword_for_gre_optional_program` | "GRE" keyword appears in GT OMSCS notes |
+
+**What worked well:**
+
+- Ranking behavior was stable and intuitive across all 5 contrasting personas.
+- Retrieval-backed explanations grounded recommendations in concrete program facts rather than generic score components.
+- The penalty/bonus asymmetry for GRE (−2.5 penalty, +1.0 bonus) correctly dominated other factors for GRE-sensitive applicants.
+
+**What required iteration:**
+
+- Initial scoring produced too many ties among in-person tier-2 programs. Adding the specialization overlap factor (up to +1.5) broke ties meaningfully.
+- Early retrieval returned only the first 300 characters for all programs. Keyword matching was added so explanations cite directly relevant sentences.
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+This project reinforced that useful applied AI systems are pipelines, not single models. Retrieval quality, schema choices, and evaluation strategy mattered as much as the ranking logic itself.
 
-[**Model Card**](model_card.md)
+The most impactful design choice was modelling GRE and application fees as prominent, high-weight factors. Most comparison tools bury these under prestige metrics, but for a large portion of applicants they are practical eliminators. Making them explicit in scoring and explanation output makes the recommender more honest about real-world tradeoffs.
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
-
----
-
-## 7. `model_card_template.md`
-
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
-
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
-
----
-
-## 3. How It Works (Short Explanation)
-
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
-
----
-
-## 4. Data
-
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
-
----
-
-## 5. Strengths
-
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
-
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
-
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
-
----
-
-## 9. Personal Reflection
-
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
-
+Building the test suite before running the full CLI also revealed a gap: the initial Recommender OOP class had stub implementations that silently returned results in dataset order. Tests exposing the GRE constraint caught this immediately, which is the kind of silent failure that would be invisible without explicit behavioral tests.
