@@ -1,79 +1,118 @@
 """
-Command line runner for the Music Recommender Simulation.
+CLI runner for the CS Master's Program Recommender.
 
-This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Loads programs from data/programs.csv and per-program text files,
+scores them against applicant personas, and prints ranked recommendations
+with retrieval-backed explanations.
 """
 
-from src.recommender import load_songs, recommend_songs
+from src.recommender import load_programs, recommend_programs, retrieve_program_notes, confidence_label
 
 
 def main() -> None:
-    songs = load_songs("data/songs.csv") 
+    programs = load_programs("data/programs.csv")
+    print(f"Loaded {len(programs)} programs\n")
 
-    print(f"Loaded songs: {len(songs)}")
-
-    # Distinct test profiles for quick experimentation.
-    profiles = {
-        "High-Energy Pop": {
-            "favorite_genre": "pop",
-            "favorite_mood": "happy",
-            "target_energy": 0.92,
-            "target_tempo_bpm": 132,
-            "target_valence": 0.83,
-            "target_danceability": 0.86,
-            "target_acousticness": 0.15,
+    personas = {
+        "Budget-Focused Domestic": {
+            "max_tuition": 25000,
+            "max_application_fee": 100,
+            "is_international": False,
+            "willing_gre": False,
+            "preferred_delivery": "online",
+            "needs_visa_support": False,
+            "preferred_ranking_tier": 3,
+            "research_focus": False,
+            "max_duration_months": 30,
+            "preferred_specializations": ["ml", "software-engineering"],
+            "preferred_location": "any",
         },
-        "Chill Lofi": {
-            "favorite_genre": "lofi",
-            "favorite_mood": "calm",
-            "target_energy": 0.28,
-            "target_tempo_bpm": 82,
-            "target_valence": 0.44,
-            "target_danceability": 0.48,
-            "target_acousticness": 0.78,
+        "International Applicant": {
+            "max_tuition": 70000,
+            "max_application_fee": 150,
+            "is_international": True,
+            "willing_gre": True,
+            "preferred_delivery": "in-person",
+            "needs_visa_support": True,
+            "preferred_ranking_tier": 2,
+            "research_focus": True,
+            "max_duration_months": 18,
+            "preferred_specializations": ["ml", "ai"],
+            "preferred_location": "any",
         },
-        "Deep Intense Rock": {
-            "favorite_genre": "rock",
-            "favorite_mood": "intense",
-            "target_energy": 0.88,
-            "target_tempo_bpm": 146,
-            "target_valence": 0.35,
-            "target_danceability": 0.42,
-            "target_acousticness": 0.12,
+        "Online-First Learner": {
+            "max_tuition": 30000,
+            "max_application_fee": 100,
+            "is_international": False,
+            "willing_gre": False,
+            "preferred_delivery": "online",
+            "needs_visa_support": False,
+            "preferred_ranking_tier": 3,
+            "research_focus": False,
+            "max_duration_months": 36,
+            "preferred_specializations": ["systems", "software-engineering"],
+            "preferred_location": "any",
         },
-        "Conflicting Sad High-Energy": {
-            "favorite_genre": "pop",
-            "favorite_mood": "sad",
-            "target_energy": 0.9,
-            "target_tempo_bpm": 128,
-            "target_valence": 0.15,
-            "target_danceability": 0.8,
-            "target_acousticness": 0.2,
+        "Research-Oriented Top-Tier": {
+            "max_tuition": 80000,
+            "max_application_fee": 150,
+            "is_international": False,
+            "willing_gre": True,
+            "preferred_delivery": "in-person",
+            "needs_visa_support": False,
+            "preferred_ranking_tier": 1,
+            "research_focus": True,
+            "max_duration_months": 18,
+            "preferred_specializations": ["ml", "ai", "theory"],
+            "preferred_location": "any",
+        },
+        "Ranking-Focused Career Switcher": {
+            "max_tuition": 70000,
+            "max_application_fee": 130,
+            "is_international": False,
+            "willing_gre": True,
+            "preferred_delivery": "in-person",
+            "needs_visa_support": False,
+            "preferred_ranking_tier": 1,
+            "research_focus": False,
+            "max_duration_months": 18,
+            "preferred_specializations": ["ml", "systems", "security"],
+            "preferred_location": "any",
         },
     }
 
-    active_profile_name = "Conflicting Sad High-Energy"
-    user_prefs = profiles[active_profile_name]
+    # Five Options: "Budget-Focused Domestic", "International Applicant", 
+    # "Online-First Learner", "Research-Oriented Top-Tier", 
+    # "Ranking-Focused Career Switcher"
+    
+    active_persona_name = "International Applicant"
+    applicant = personas[active_persona_name]
 
-    recommendations = recommend_songs(user_prefs, songs, k=5)
-
-    print(f"User Profile: {active_profile_name}")
-    print("User Preferences:")
-    for key, value in user_prefs.items():
+    print(f"Applicant Profile: {active_persona_name}")
+    print("Preferences:")
+    for key, value in applicant.items():
         print(f"  {key}: {value}")
 
-    print("\nTop recommendations:\n")
-    for rec in recommendations:
-        # You decide the structure of each returned item.
-        # A common pattern is: (song, score, explanation)
-        song, score, explanation = rec
-        print(f"{song['title']} - Score: {score:.2f}")
-        print(f"Because: {explanation}")
+    recommendations = recommend_programs(applicant, programs, k=5)
+
+    print(f"\nTop {len(recommendations)} Recommended Programs:\n")
+    for rank, (program, score, reasons_str) in enumerate(recommendations, start=1):
+        app_fee = (
+            program.get("application_fee_international", program["application_fee"])
+            if applicant.get("is_international", False)
+            else program["application_fee"]
+        )
+        print(f"#{rank} {program['university']} — {program['program_name']} [{confidence_label(score)}]")
+        print(f"     Score: {score:.2f} | Delivery: {program['delivery']} | "
+              f"Tuition: ${program['tuition_total']:,.0f} | "
+              f"GRE Required: {program['gre_required']} | "
+              f"App Fee: ${app_fee}")
+        print(f"     Scoring breakdown: {reasons_str}")
+
+        keywords = applicant["preferred_specializations"]
+        retrieved = retrieve_program_notes(program["notes_file"], keywords)
+        if retrieved:
+            print(f"     Retrieved: {retrieved}")
         print()
 
 
