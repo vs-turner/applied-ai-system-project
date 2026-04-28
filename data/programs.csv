@@ -1,0 +1,11 @@
+id,university,program_name,location,delivery,tuition_total,application_fee,application_fee_international,gre_required,duration_months,ranking_tier,visa_support,graduation_rate,specializations,notes_file
+1,Stanford University,MS Computer Science,stanford ca,in-person,67000,125,125,True,18,1,True,0.95,ml;ai;systems;theory,data/programs/stanford_mscs.txt
+2,Carnegie Mellon University,MS Computer Science,pittsburgh pa,in-person,58000,100,100,False,16,1,True,0.94,ml;systems;security;robotics,data/programs/cmu_mscs.txt
+3,Georgia Institute of Technology,Online MS Computer Science,atlanta ga,online,7000,75,75,False,24,2,False,0.72,ml;systems;software-engineering;hci,data/programs/gatech_omscs.txt
+4,University of Illinois Urbana-Champaign,Master of Computer Science,champaign il,online,22000,70,70,False,24,2,False,0.80,ml;systems;data-science,data/programs/uiuc_mcs.txt
+5,Columbia University,MS Computer Science,new york ny,in-person,65000,85,85,True,18,2,True,0.88,ml;systems;security;data-science,data/programs/columbia_mscs.txt
+6,UC San Diego,MS Computer Science,san diego ca,in-person,37000,120,120,False,18,2,True,0.85,systems;ml;networking;hci,data/programs/ucsd_mscs.txt
+7,University of Texas at Austin,MS Computer Science,austin tx,in-person,20000,65,90,False,18,2,True,0.87,ml;systems;security;software-engineering,data/programs/ut_austin_mscs.txt
+8,Northeastern University,MS Computer Science,boston ma,hybrid,42000,100,100,False,24,3,True,0.83,ml;software-engineering;hci;data-science,data/programs/northeastern_mscs.txt
+9,Carnegie Mellon University,MS Computational Data Science,pittsburgh pa,in-person,73000,100,100,False,16,1,True,0.93,data-science;ml;systems,data/programs/cmu_mcds.txt
+10,Arizona State University,MS Computer Science,tempe az,online,15000,70,70,False,30,4,False,0.71,software-engineering;systems;hci,data/programs/asu_mscs.txt
