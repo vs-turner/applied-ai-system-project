@@ -233,6 +233,10 @@ Automated tests catch scoring regressions and verify invariants (e.g., GRE-optio
 
 ---
 
+## Video Walkthrough
+[Link on Loom](https://www.loom.com/share/8448b2bfca1d499ba06327aa2becb7b1)
+---
+
 ## Reflection
 
 This project reinforced that useful applied AI systems are pipelines, not single models. Retrieval quality, schema choices, and evaluation strategy mattered as much as the ranking logic itself.
